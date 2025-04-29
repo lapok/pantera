@@ -1,0 +1,90 @@
+.album-container-wrapper {
+    display: flex;       
+    justify-content: center;           
+    min-height: 80vh;       
+    background-color: rgb(10, 10, 10);
+    margin-top: 175px;
+
+}
+
+.album-container {
+    max-width: 1200px;
+    width: 100%;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.album-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.album-title.second {
+    margin-top: 40px;
+}
+
+.album-title span {                
+    width: 30%;
+    height: 1px;
+    background-color: white;
+    margin: 0 15px;
+}
+
+.album-title h3 {
+    color: white;
+    font-size: 22px;
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.album-image {
+    margin-top: 40px;
+    width: 500px;
+    height: 500px;
+}
+
+.album-info {
+    background-color: #111;
+    color: white;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    max-width: 800px;
+    margin: auto;
+    margin-top: 40px;
+}
+
+.album-details {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.album-details li {
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.quotes {
+    margin-top: 30px;
+}
+
+.quotes p {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+blockquote {
+    background-color: #222;
+    padding: 15px;
+    margin: 20px 0;
+    border-left: 5px solid #fff;
+    font-style: italic;
+}
+
+.album-widget {
+    margin-top: 40px;
+    margin-bottom: 40px;
+}

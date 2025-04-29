@@ -1,25 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import './main-window.css';
 
-const UserProfileModal = ({ isOpen, onClose, user, onLogout }) => {
+const UserProfileModal = ({ isOpen, onClose, user, onLogout, viewUser }) => { 
     const [editAbout, setEditAbout] = useState('');
     const [isSaving, setIsSaving] = useState(false);
-    const [isEditing, setIsEditing] = useState(false); // Состояние для переключения между режимами
+    const [isEditing, setIsEditing] = useState(false);
 
     useEffect(() => {
-        if (user) {
-            setEditAbout(user.about || '');
+        if (viewUser) {
+            setEditAbout(viewUser.about || '');  // Загружаем информацию о пользователе, если он передан
         }
-    }, [user]);
+    }, [viewUser]);
 
-    if (!isOpen || !user) return null;
+    if (!isOpen || !viewUser) return null;  // Если модальное окно не открыто или нет данных о пользователе
 
     const handleSave = async () => {
         setIsSaving(true);
         try {
             const token = localStorage.getItem('token');
             const res = await fetch('http://localhost:5000/api/me/about', {
-                method: 'PUT',  // Используем PUT, а не PATCH
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`,
@@ -29,7 +29,7 @@ const UserProfileModal = ({ isOpen, onClose, user, onLogout }) => {
 
             if (res.ok) {
                 alert('Информация обновлена!');
-                setIsEditing(false); // Переключаем обратно в режим отображения после сохранения
+                setIsEditing(false);
             } else {
                 alert('Ошибка при сохранении');
             }
@@ -48,8 +48,8 @@ const UserProfileModal = ({ isOpen, onClose, user, onLogout }) => {
                 <div className='user-info'>
                     <div className='avatar-placeholder'>👤</div>
                     <div>
-                        <p><strong>{user.username}</strong> <span className='role-label'>[{user.role}]</span></p>
-                        <p>Зарегистрирован с: {new Date(user.created_at).toLocaleDateString()}</p>
+                        <p><strong>{viewUser.username}</strong> <span className='role-label'>[{viewUser.role}]</span></p>
+                        <p>Зарегистрирован с: {new Date(viewUser.created_at).toLocaleDateString()}</p>
                     </div>
                 </div>
 
@@ -72,26 +72,30 @@ const UserProfileModal = ({ isOpen, onClose, user, onLogout }) => {
                             }}
                         />
                     ) : (
-                        <p>{editAbout || 'Не указано'}</p>  // Если нет текста, показываем 'Не указано'
+                        <p>{editAbout || 'Не указано'}</p>
                     )}
-                    <div>
-                        {isEditing ? (
-                            <button
-                                className="logout-button"
-                                onClick={handleSave}
-                                disabled={isSaving}
-                            >
-                                {isSaving ? 'Сохраняю...' : 'Сохранить'}
-                            </button>
-                        ) : (
-                            <button className="logout-button" onClick={() => setIsEditing(true)}>
-                                Редактировать
-                            </button>
-                        )}
-                    </div>
+                    {user?.id === viewUser?.id ? (
+                        <div>
+                            {isEditing ? (
+                                <button
+                                    className="logout-button"
+                                    onClick={handleSave}
+                                    disabled={isSaving}
+                                >
+                                    {isSaving ? 'Сохраняю...' : 'Сохранить'}
+                                </button>
+                            ) : (
+                                <button className="logout-button" onClick={() => setIsEditing(true)}>
+                                    Редактировать
+                                </button>
+                            )}
+                        </div>
+                    ) : null}
                 </div>
 
-                <button onClick={onLogout} className='logout-button'>Выйти с аккаунта</button>
+                {user?.id === viewUser?.id && (
+                    <button onClick={onLogout} className='logout-button'>Выйти с аккаунта</button>
+                )}
                 <button onClick={onClose} className='close-button'>Закрыть</button>
             </div>
         </div>

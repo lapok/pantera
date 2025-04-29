@@ -7,9 +7,10 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^13.5.0",
-    "axios": "^1.8.4",
+    "axios": "^1.9.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "multer": "^1.4.5-lts.2",
     "pg": "^8.14.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -30,7 +31,10 @@
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "globals": {
+      "VK": "readonly"
+    }
   },
   "browserslist": {
     "production": [

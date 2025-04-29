@@ -1,0 +1,125 @@
+.tour-container-wrapper {
+  background-color: rgb(10, 10, 10);
+  margin-top: 200px; /* Уменьшаем отступ сверху */
+  display: flex;
+  justify-content: center;
+}
+
+/* Контейнер туров */
+.tour-container {
+  width: 100%;
+  max-width: 1200px; /* Уменьшаем максимальную ширину */
+  background-color: rgb(13, 13, 13);
+  border-radius: 8px;
+  padding: 20px; /* Уменьшаем отступы внутри */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  color: #fff;
+}
+
+/* Заголовок страницы */
+.tour-title {
+  text-align: center;
+  margin-bottom: 20px; /* Уменьшаем отступы */
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.tour-title span {
+  width: 30%;
+  height: 1px;
+  background-color: white;
+  margin: 0 15px
+}
+
+.tour-title h3 {
+  font-size: 1.5rem; /* Уменьшаем размер шрифта */
+  margin: 0;
+}
+
+/* Обертка для списка туров */
+.tour-table {
+  margin-top: 20px;
+}
+
+/* Элемент тура */
+.tour-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px; /* Уменьшаем отступы */
+  background-color: #444;
+  border-radius: 8px;
+  margin-bottom: 15px; /* Уменьшаем отступы между турами */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.3s ease;
+}
+
+.tour-item:hover {
+  background-color: #555;
+}
+
+/* Информация о туре (название, место, дата) */
+.tour-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 5px; /* Уменьшаем отступы между элементами */
+}
+
+.tour-title {
+  font-size: 1.3rem; /* Уменьшаем размер названия */
+  font-weight: bold;
+  margin: 0;
+  color: #fff;
+}
+
+.tour-location {
+  color: #ccc;
+  font-size: 1rem; /* Уменьшаем размер шрифта */
+}
+
+.tour-date {
+  font-size: 1.2rem; /* Уменьшаем размер шрифта */
+  color: #ffffff;
+  font-weight: bold;
+}
+
+/* Стили для кнопок действий */
+.tour-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px; /* Уменьшаем отступы между кнопками */
+}
+
+.tour-actions button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 15px; /* Уменьшаем размер кнопок */
+  font-size: 0.9rem; /* Уменьшаем размер шрифта */
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.tour-actions button:hover {
+  background-color: #0056b3;
+}
+
+/* Кнопка добавления тура */
+.add-tour-btn {
+  padding: 10px 20px; /* Уменьшаем размер кнопки */
+  font-size: 1rem;
+  color: white;
+  background-color: #28a745;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.add-tour-btn:hover {
+  background-color: #218838;
+}

@@ -2,20 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Carousel } from 'react-responsive-carousel';
 import 'react-responsive-carousel/lib/styles/carousel.min.css';
 import './main-window.css';
-import { FaFacebookF, FaInstagram, FaTiktok, FaTwitter, FaYoutube } from 'react-icons/fa';
 import AuthModal from './AuthModal';
 import UserProfileModal from './userProfileModal';
-import { NavLink } from 'react-router-dom';
 import Navbar from './NavBar';
-
 
 
 const MainWindow = () => {
     const [scrolled, setScrolled] = useState(false);
-    
     const [showProfile, setShowProfile] = useState(false);
-
     const [user, setUser] = useState(null);
+    const [news, setNews] = useState([]);
+    const [viewUser, setViewUser] = useState(null);
+
+    const handleNewsAdded = (newNews) => {
+        setNews((prevNews) => [newNews, ...prevNews.slice(0, 1)]);
+    };
 
     const fetchUser = async () => {
         const token = localStorage.getItem('token');
@@ -40,7 +41,7 @@ const MainWindow = () => {
 
     useEffect(() => {
         fetchUser();
-        
+
         const handleScroll = () => {
             setScrolled(window.scrollY > 50);
         };
@@ -48,8 +49,7 @@ const MainWindow = () => {
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
-
-
+    
     const [isDropdownOpen, setDropdownOpen] = useState(false);
 
     const toggleDropdown = () => {
@@ -57,9 +57,9 @@ const MainWindow = () => {
     };
 
     const slides = [
-        { image: '/carousel-1.jpg', buttonText: 'Даты туров', link: '#tours' },
+        { image: '/carousel-1.jpg', buttonText: 'Даты туров', link: '/tours' },
         { image: '/carousel-2.jpg', buttonText: 'Графический роман "VULGAR DISPLAY OF POWER" от Z2 COMICS', link: 'https://z2comics.com/collections/pantera' },
-        { image: '/carousel-3.png', buttonText: 'Фото с выступлений, новости и объявления', link: '#news' },
+        { image: '/carousel-3.png', buttonText: 'Фото с выступлений, новости и объявления', link: '/news' },
     ];
 
     const handleButtonClick = (link) => {
@@ -149,14 +149,6 @@ const MainWindow = () => {
 
     return (
         <>
-            <Navbar 
-                user={user}
-                onProfileClick={() => setShowProfile(true)}
-                onAuthClick={() => {
-                setIsRegisterMode(false);
-                setShowAuthModal(true);
-            }}
-            />
             <div className='carousel-container'>
                 <Carousel
                     showArrows={true}
@@ -207,7 +199,7 @@ const MainWindow = () => {
 
             <div className='image-grid'>
                 <div className='grid-item' style={{ backgroundImage: "url('/grid-1.jpg')" }}>
-                    <a href='#'>МУЗЫКА</a>
+                    <a href='/discography'>МУЗЫКА</a>
                 </div>
 
                 <div className='grid-item' style={{ backgroundImage: "url('/grid-2.jpg')" }}>
@@ -219,64 +211,29 @@ const MainWindow = () => {
                 </div>
             </div>
 
+            
 
-            <footer className='footer-main'>
-                <div className='footer-section about'>
-                    <h2>О нас</h2>
-                    <p>
-                        Создатели "Power Groove", Pantera стали флагманами хэви-метала в 90-е годы, собрав длинный список золотых и платиновых альбомов, а также гастроли по всему миру.
-                    </p>
+            <AuthModal
+                isOpen={showAuthModal}
+                onClose={() => setShowAuthModal(false)}
+                onSwitch={() => setIsRegisterMode((prev) => !prev)}
+                isRegisterMode={isRegisterMode}
+                onLoginSuccess={fetchUser}
+            />
 
-                    <div className='social-icons'>
-                        <FaFacebookF />
-                        <FaInstagram />
-                        <FaTiktok />
-                        <FaTwitter />
-                        <FaYoutube />
-                    </div>
-                </div>
-
-                <div className='footer-section news'>
-                    <h2>Последние новости</h2>
-                    <ul>
-                        <li>
-                            Затычка 1
-                        </li>
-
-                        <li>
-                            Затычка 2
-                        </li>
-                    </ul>
-                </div>
-
-                <div className='footer-section more-info'>
-                    <h2>Больше новостей/Информация</h2>
-                    <ul>
-                        <li><a href='#'>Pantera</a></li>
-                        <li><a href='#'>Dimebag Darrell</a></li>
-                        <li><a href='#'>Philip H Anselmo</a></li>
-                        <li><a href='#'>Rex Brown</a></li>
-                        <li><a href='#'>Vinnie Paul</a></li>
-                    </ul>
-                </div>
-            </footer>
-        <AuthModal
-            isOpen={showAuthModal}
-            onClose={() => setShowAuthModal(false)}
-            onSwitch={() => setIsRegisterMode((prev) => !prev )}
-            isRegisterMode={isRegisterMode}
-            onLoginSuccess={fetchUser}
-        />
-
-        <UserProfileModal
-            isOpen={showProfile}
-            onClose={() => setShowProfile(false)}
-            user={user}
-            onLogout={() => {
-                localStorage.removeItem('token');
-                window.location.reload();
-            }}
-        />
+            <UserProfileModal
+                isOpen={showProfile}
+                onClose={() => {
+                    setViewUser(null);
+                    setShowProfile(false);
+                }}
+                user={user}
+                onLogout={() => {
+                    localStorage.removeItem('token');
+                    window.location.reload();
+                }}
+                viewUser={viewUser}
+            />
         </>
     );
 };

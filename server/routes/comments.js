@@ -28,19 +28,20 @@ router.get('/:post_id', async (req, res) => {
 
     try {
         const result = await db.query(
-            `SELECT comments.*, users.username
+            `SELECT comments.*, users.username, users.role  -- добавляем users.role
             FROM comments
             JOIN users ON comments.user_id = users.id
             WHERE post_id = $1
             ORDER BY comments.created_at ASC`,
             [post_id]
         );
-        res.json(result.rows);
+        res.json(result.rows);  // теперь в каждом комментарии будет также роль
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Ошибка загрузки комментариев' });
     }
 });
+
 
 router.delete('/:id', authMiddleware, async (req, res) => {
     const { id } = req.params;

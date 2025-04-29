@@ -2,13 +2,22 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const authMiddleware = require('./auth');
+const upload = require('../middleware/upload');
+const fs = require('fs');
+const path = require('path');
 
-router.post('/create', authMiddleware, async (req, res) => {
-    const { title, content, image_url } = req.body;
+// Создание нового поста
+router.post('/create', authMiddleware, upload.array('images'), async (req, res) => {
+    const { title, content } = req.body;
+
+    // Формируем список URL изображений
+    const imageUrls = req.files.map(file => `/uploads/${file.filename}`);
+
     try {
+        // Вставляем новый пост в базу данных
         const result = await db.query(
-            'INSERT INTO posts (title, content, image_url) VALUES ($1, $2, $3) RETURNING *',
-            [title, content, image_url]
+            'INSERT INTO posts (title, content, image_url, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW()) RETURNING *',
+            [title, content, JSON.stringify(imageUrls)]  // Сохраняем пути к изображениям как JSON
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -17,6 +26,7 @@ router.post('/create', authMiddleware, async (req, res) => {
     }
 });
 
+// Получение всех постов
 router.get('/', async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM posts ORDER BY created_at DESC');
@@ -27,6 +37,7 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Получение поста по ID
 router.get('/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -41,71 +52,136 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Route prefix must match client paths (/posts/...)
+// Удаление поста
 router.delete('/posts/:id', authMiddleware, async (req, res) => {
     const { id } = req.params;
     
     try {
-        console.log(`Попытка удаления поста с ID: ${id}`);
-        console.log(`Пользователь:`, req.user);
-        
         const postCheck = await db.query('SELECT * FROM posts WHERE id = $1', [id]);
         
         if (postCheck.rows.length === 0) {
-            console.log(`Пост с ID ${id} не найден`);
             return res.status(404).json({ message: 'Пост не найден' });
         }
-        
-        try {
-            await db.query('DELETE FROM comments WHERE post_id = $1', [id]);
-            console.log(`Комментарии для поста ${id} удалены`);
-        } catch (commentErr) {
-            console.error('Ошибка при удалении комментариев:', commentErr);
-        }
-        
+
+        // Удаление комментариев
+        await db.query('DELETE FROM comments WHERE post_id = $1', [id]);
+
         const deleteResult = await db.query('DELETE FROM posts WHERE id = $1 RETURNING id', [id]);
-        
+
         if (deleteResult.rows.length === 0) {
-            throw new Error('Пост не был удален по неизвестной причине');
+            throw new Error('Пост не был удален');
         }
         
-        console.log(`Пост с ID ${id} успешно удален`);
         res.status(200).json({ message: 'Пост удален', id });
     } catch (err) {
-        console.error('Подробная ошибка при удалении поста:', err);
+        console.error(err);
         res.status(500).json({ message: 'Ошибка удаления поста', error: err.message });
     }
 });
 
-router.put('/posts/:id', authMiddleware, async (req, res) => {
-    const { id } = req.params;
-    const { title, content, image_url } = req.body;
-    const userId = req.user.id;
-    const userRole = req.user.role;
-    
+// Удаление изображения
+router.delete('/delete-image', async (req, res) => {
+    const { imageUrl, postId } = req.body;
+
+    // Исправляем путь к файлу: предполагаем, что imageUrl уже включает '/uploads/'
+    const filePath = path.join(__dirname, '../uploads', imageUrl.replace('/uploads/', ''));
+
     try {
-        const result = await db.query('SELECT * FROM posts WHERE id = $1', [id]);
-        const post = result.rows[0];
+        // Удаляем файл из папки
+        fs.unlinkSync(filePath);
+
+        // Обновляем ссылку на изображение в базе данных
+        const post = await db.query('SELECT * FROM posts WHERE id = $1', [postId]);
         
-        if (!post) {
+        if (post.rows.length === 0) {
             return res.status(404).json({ message: 'Пост не найден' });
         }
-        
-        if (post.user_id !== userId && userRole !== 'admin') {
-            return res.status(403).json({ message: 'Нет прав на редактирование' });
-        }
-        
-        const updateResult = await db.query(
-            'UPDATE posts SET title = $1, content = $2, image_url = COALESCE($3, image_url) WHERE id = $4 RETURNING *',
-            [title, content, image_url, id]
-        );
-        
-        res.status(200).json(updateResult.rows[0]);
+
+        // Фильтруем массив изображений и удаляем ссылку на удаленное изображение
+        const updatedImages = JSON.parse(post.rows[0].image_url).filter(url => url !== imageUrl);
+
+        // Обновляем пост в базе данных
+        await db.query('UPDATE posts SET image_url = $1 WHERE id = $2', [JSON.stringify(updatedImages), postId]);
+
+        res.status(200).json({ message: 'Изображение успешно удалено' });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Ошибка редактирования поста' });
+        console.error('Ошибка при удалении изображения:', err);
+        res.status(500).json({ message: 'Не удалось удалить изображение', error: err.message });
     }
 });
+
+
+// Изменения для маршрута редактирования поста в routes файле
+router.put('/posts/:id', authMiddleware, upload.array('images'), async (req, res) => {
+    const { id } = req.params;
+    const { title, content } = req.body;
+    const existingImages = req.body.existingImages || [];
+    
+    try {
+        // Проверяем существование пост
+        const postCheck = await db.query('SELECT * FROM posts WHERE id = $1', [id]);
+        
+        if (postCheck.rows.length === 0) {
+            return res.status(404).json({ message: 'Пост не найден' });
+        }
+
+        // Получаем текущие изображения поста
+        let currentImages = [];
+        try {
+            currentImages = JSON.parse(postCheck.rows[0].image_url || '[]');
+        } catch (err) {
+            console.error('Ошибка при парсинге существующих изображений:', err);
+            currentImages = [];
+        }
+        
+        // Пути к новым загруженным изображениям
+        const newImageUrls = req.files.map(file => `/uploads/${file.filename}`);
+        
+        // Если existingImages передан как массив строк, используем его
+        // В противном случае, если передан как строка, парсим JSON
+        let imagesArray = [];
+        if (Array.isArray(existingImages)) {
+            imagesArray = existingImages;
+        } else if (typeof existingImages === 'string') {
+            try {
+                imagesArray = [existingImages]; // Одно изображение как строка
+            } catch (e) {
+                console.error('Ошибка при парсинге existingImages:', e);
+                imagesArray = [];
+            }
+        }
+        
+        // Объединяем существующие и новые изображения
+        const allImages = [...imagesArray, ...newImageUrls];
+
+        // Обновляем пост в базе данных
+        const updateResult = await db.query(
+            `UPDATE posts 
+             SET title = $1, 
+                 content = $2, 
+                 image_url = $3,
+                 updated_at = NOW()
+             WHERE id = $4 
+             RETURNING *`,
+            [title, content, JSON.stringify(allImages), id]
+        );
+        
+        if (updateResult.rows.length === 0) {
+            throw new Error('Пост не был обновлен');
+        }
+
+        res.status(200).json(updateResult.rows[0]);
+
+    } catch (err) {
+        console.error('Ошибка при обновлении поста:', err);
+        res.status(500).json({ message: 'Ошибка редактирования поста', error: err.message });
+    }
+});
+
+
+
+
+
 
 
 module.exports = router;

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './main-window.css';
 import './NewsPage.css';
-import Navbar from './NavBar';
 import AuthModal from './AuthModal';
 import UserProfileModal from './userProfileModal';
 import CreatePostModal from './CreatePostModal';
@@ -19,12 +18,15 @@ const NewsPage = () => {
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editedComment, setEditedComment] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [viewUser, setViewUser] = useState(null);
 
   const fetchPosts = async () => {
     try {
       const res = await fetch('http://localhost:5000/api/news');
       const data = await res.json();
       setPosts(data);
+      setLoading(false);  // Убираем индикатор загрузки, когда посты загружены
     } catch (err) {
       console.error('Ошибка загрузки новостей:', err);
     }
@@ -51,11 +53,26 @@ const NewsPage = () => {
     }
   };
 
+  const fetchUserProfile = async (userId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/users/${userId}`);
+      
+      if (!res.ok) throw new Error('Не удалось загрузить профиль пользователя');
+      
+      const userData = await res.json();
+      setViewUser(userData);
+      setShowProfile(true);
+    } catch (err) {
+      console.error('Ошибка при загрузке профиля пользователя:', err);
+      alert('Не удалось загрузить профиль пользователя');
+    }
+  };
+
   const fetchComments = async (postId) => {
     try {
       const res = await fetch(`http://localhost:5000/api/comments/${postId}`);
       const data = await res.json();
-      setComments(prev => ({ ...prev, [postId]: data }));
+      setComments((prev) => ({ ...prev, [postId]: data }));
     } catch (err) {
       console.error('Ошибка загрузки комментариев:', err);
     }
@@ -78,7 +95,7 @@ const NewsPage = () => {
 
       if (!res.ok) throw new Error('Ошибка при добавлении комментария');
 
-      setNewComment((prev) => ({ ...prev, [postId]: ''}));
+      setNewComment((prev) => ({ ...prev, [postId]: '' }));
       fetchComments(postId);
     } catch (err) {
       console.error(err);
@@ -108,6 +125,10 @@ const NewsPage = () => {
       alert('Не удалось удалить комментарий');
     }
   };
+
+  const handleAvatarClick = (comment) => {
+    fetchUserProfile(comment.user_id);
+  }
 
   const handleEditComment = async (commentId, postId) => {
     const token = localStorage.getItem('token');
@@ -160,20 +181,38 @@ const NewsPage = () => {
       }
   };
 
-  const handleEditPost = async (post) => {
+  const handleCommentClick = (commentUser) => {
+    fetchUserProfile(commentUser.user_id);
+  }
+
+  const handleCloseProfile = () => {
+    setViewUser(null);
+    setShowProfile(false);
+  }
+
+  const handleEditPost = (post) => {
     setPostToEdit(post);
     setShowCreateModal(true);
-};
-
-
-  const handlePostCreated = (newPost) => {
-    if (newPost.id) {
-        setPosts([newPost, ...posts]);
-    } else {
-        setPosts(posts.map(post => post.id === newPost.id ? newPost : post));
-    }
   };
-  
+
+
+  const handlePostCreated = (newPost, isEdit = false) => {
+    console.log('Получен новый или обновленный пост:', newPost);
+    
+    if (isEdit) {
+        // Это обновление существующего поста
+        setPosts(prevPosts => 
+            prevPosts.map(post => post.id === newPost.id ? newPost : post)
+        );
+    } else {
+        // Это новый пост
+        setPosts(prevPosts => [newPost, ...prevPosts]);
+    }
+    
+    // Закрываем модальное окно и сбрасываем postToEdit
+    setShowCreateModal(false);
+    setPostToEdit(null);
+  };
 
   useEffect(() => {
     fetchPosts();
@@ -188,14 +227,6 @@ const NewsPage = () => {
 
   return (
     <>
-      <Navbar
-        user={user}
-        onAuthClick={() => {
-          setIsRegisterMode(false);
-          setShowAuthModal(true);
-        }}
-        onProfileClick={() => setShowProfile(true)}
-      />
 
       <div className="news-page">
         <h1>Новости</h1>
@@ -209,14 +240,35 @@ const NewsPage = () => {
           </div>
         )}
 
-        {posts.length === 0 ? (
+        {loading ? (
+          <p style={{ color: '#888', textAlign: 'center' }}>Загрузка...</p>
+        ) : posts.length === 0 ? (
           <p style={{ color: '#888', textAlign: 'center' }}>Пока новостей нет.</p>
         ) : (
           posts.map((post) => (
             <div key={post.id} className="post">
               <h2>{post.title}</h2>
-              {post.image_url && <img src={post.image_url} alt={post.title} />}
+              {post.image_url && post.image_url.length > 0 ? (
+                JSON.parse(post.image_url).map((url, index) => (
+                  <img 
+                    key={index}
+                    src={`http://localhost:5000${url}`}
+                    alt={`post-image-${index}`}
+                    style={{ maxWidth: '100%', height: 'auto' }}
+                  />
+                ))
+              ) : (
+                <p>Изображение не доступно</p>
+              )}
+
               <p>{post.content}</p>
+
+              <div className="post-meta">
+                <span>Дата создания: {new Date(post.created_at).toLocaleString('ru-RU')}</span>
+                {post.updated_at && post.updated_at !== post.created_at && (
+                  <span> | Последнее редактирование: {new Date(post.updated_at).toLocaleString('ru-RU')}</span>
+                )}
+              </div>
 
               {user?.role === 'admin' && (
                 <div className='post-actions'>
@@ -239,12 +291,18 @@ const NewsPage = () => {
 
                 {(comments[post.id] || []).map((comment) => (
                   <div key={comment.id} className="comment">
-                    <div className="comment-meta">
-                      <span className="comment-author">{comment.username}</span>
-                      <span className="comment-time">
-                        {new Date(comment.created_at).toLocaleString('ru-RU')}
-                      </span>
-                    </div>
+                      <div className="comment-meta">
+                          <span 
+                              className="comment-author" 
+                              onClick={() => handleAvatarClick(comment)} // Здесь вызываем обработчик клика по аватарке
+                          >
+                              {comment.username}
+                              {comment.role && <span className="role-prefix"> [{comment.role}]</span>}
+                          </span>
+                          <span className="comment-time">
+                              {new Date(comment.created_at).toLocaleString('ru-RU')}
+                          </span>
+                      </div>
 
                     {editingCommentId === comment.id ? (
                       <>
@@ -304,19 +362,20 @@ const NewsPage = () => {
 
       <UserProfileModal
         isOpen={showProfile}
-        onClose={() => setShowProfile(false)}
+        onClose={handleCloseProfile}
         user={user}
         onLogout={() => {
           localStorage.removeItem('token');
           setUser(null);
           setShowProfile(false);
         }}
+        viewUser={viewUser}
       />
 
       <CreatePostModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onPostCreated={(newPost) => setPosts([newPost, ...posts])}
+        onPostCreated={handlePostCreated}
         postToEdit={postToEdit}
       />
     </>
